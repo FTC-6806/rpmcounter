@@ -1,4 +1,4 @@
-#include <FreqCount.h>
+#include <FreqMeasure.h>
 #include <Wire.h>
 #include <Adafruit_MCP23017.h>
 #include <Adafruit_RGBLCDShield.h>
@@ -8,7 +8,8 @@
 enum Mode {
   frequency,
   rpm
-} mode;
+} 
+mode;
 
 Adafruit_RGBLCDShield lcd = Adafruit_RGBLCDShield();
 
@@ -17,22 +18,35 @@ void setup() {
   lcd.begin(16, 2);
   mode = frequency;
   updateMode();
-  FreqCount.begin(1000);
+  FreqMeasure.begin();
 }
 
+double sum=0;
+int count=0;
+
 void loop() {
-  if (FreqCount.available()) {
-    unsigned long hertz = FreqCount.read();
-    lcd.setCursor(0, 1);
-    if (mode == frequency) {
-      lcd.print(hertz);
-      lcd.print(" Hz      ");
-    } else if (mode == rpm) {
-      lcd.print(HERTZ_TO_RPM(hertz));
-      lcd.print(" RPM     ");
+  if (FreqMeasure.available()) {
+    // average several readings together
+    sum = sum + FreqMeasure.read();
+    count = count + 1;
+    if (count > 30) {
+      float hertz = FreqMeasure.countToFrequency(sum / count);
+
+      lcd.setCursor(0, 1);
+      if (mode == frequency) {
+        lcd.print(hertz);
+        lcd.print(" Hz      ");
+      } 
+      else if (mode == rpm) {
+        lcd.print(HERTZ_TO_RPM(hertz));
+        lcd.print(" RPM     ");
+      }
+
+      sum = 0;
+      count = 0;
     }
   }
-  
+
   uint8_t buttons = lcd.readButtons();
   if (buttons) {
     if (buttons & BUTTON_UP){
@@ -51,7 +65,10 @@ void updateMode() {
   lcd.setCursor(0, 0);
   if (mode == frequency) {
     lcd.print("Frequency:");
-  } else if (mode == rpm) {
+  } 
+  else if (mode == rpm) {
     lcd.print("RPM:");
   }
 }
+
+
