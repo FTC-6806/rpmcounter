@@ -7,9 +7,14 @@
 
 enum Mode {
   frequency,
+  rotation
+} mode;
+
+enum Units {
+  hz,
   rpm
-} 
-mode;
+} units;
+  
 
 Adafruit_RGBLCDShield lcd = Adafruit_RGBLCDShield();
 
@@ -17,6 +22,7 @@ void setup() {
   Serial.begin(57600);
   lcd.begin(16, 2);
   mode = frequency;
+  units = hz;
   updateMode();
   FreqMeasure.begin();
 }
@@ -34,12 +40,16 @@ void loop() {
 
       lcd.setCursor(0, 1);
       if (mode == frequency) {
-        lcd.print(hertz);
-        lcd.print(" Hz      ");
+        if (units == hz) {
+          lcd.print(hertz);
+          lcd.print(" Hz      ");
+        }
       } 
-      else if (mode == rpm) {
-        lcd.print(HERTZ_TO_RPM(hertz));
-        lcd.print(" RPM     ");
+      else if (mode == rotation) {
+        if (units == rpm) {
+          lcd.print(HERTZ_TO_RPM(hertz));
+          lcd.print(" RPM     ");
+        }
       }
 
       sum = 0;
@@ -51,10 +61,12 @@ void loop() {
   if (buttons) {
     if (buttons & BUTTON_UP){
       mode = frequency;
+      units = hz;
       updateMode();
     }
     if (buttons & BUTTON_DOWN) {
-      mode = rpm;
+      mode = rotation;
+      units = rpm;
       updateMode();
     }
   }
@@ -66,8 +78,8 @@ void updateMode() {
   if (mode == frequency) {
     lcd.print("Frequency:");
   } 
-  else if (mode == rpm) {
-    lcd.print("RPM:");
+  else if (mode == rotation) {
+    lcd.print("Rotation:");
   }
 }
 
