@@ -1,43 +1,57 @@
-#include <FreqCounter.h>
-
+#include <FreqCount.h>
 #include <Wire.h>
 #include <Adafruit_MCP23017.h>
 #include <Adafruit_RGBLCDShield.h>
 
-Adafruit_RGBLCDShield lcd = Adafruit_RGBLCDShield();
+#define HERTZ_TO_RPM(x) x * 60
 
-// These #defines make it easy to set the backlight color
-#define RED 0x1
-#define YELLOW 0x3
-#define GREEN 0x2
-#define TEAL 0x6
-#define BLUE 0x4
-#define VIOLET 0x5
-#define WHITE 0x7
+enum Mode {
+  frequency,
+  rpm
+} mode;
+
+Adafruit_RGBLCDShield lcd = Adafruit_RGBLCDShield();
 
 void setup() {
   Serial.begin(57600);
-  lcd.begin(16, 2); // Set up the LCD
-  lcd.print("Frequency:"); // Print out a headline on the LCD
+  lcd.begin(16, 2);
+  mode = frequency;
+  updateMode();
+  FreqCount.begin(1000);
 }
 
-long int frq;
-long int lfrq;
 void loop() {
-  FreqCounter::f_comp= 8;             // Set compensation to 12
-  FreqCounter::start(100);            // Start counting with gatetime of 100ms
-  while (FreqCounter::f_ready == 0)         // wait until counter ready
-  frq=FreqCounter::f_freq;            // read result
-  
-  if (lfrq != frq) {
-    lcd.setCursor(0, 1); // Set the cursor to column 0, line 1
-    //lcd.print("                  "); // Yeah. Not how it's supposed to be done :P
-    lcd.setCursor(0, 1); // Set the cursor to column 0, line 1
-    lcd.print(String(frq) + "    Hz    "); // Print the hertz
+  if (FreqCount.available()) {
+    unsigned long hertz = FreqCount.read();
+    lcd.setCursor(0, 1);
+    if (mode == frequency) {
+      lcd.print(hertz);
+      lcd.print(" Hz      ");
+    } else if (mode == rpm) {
+      lcd.print(HERTZ_TO_RPM(hertz));
+      lcd.print(" RPM     ");
+    }
   }
   
-  lfrq = frq;  
-  delay(20);
+  uint8_t buttons = lcd.readButtons();
+  if (buttons) {
+    if (buttons & BUTTON_UP){
+      mode = frequency;
+      updateMode();
+    }
+    if (buttons & BUTTON_DOWN) {
+      mode = rpm;
+      updateMode();
+    }
+  }
 }
 
-
+void updateMode() {
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  if (mode == frequency) {
+    lcd.print("Frequency:");
+  } else if (mode == rpm) {
+    lcd.print("RPM:");
+  }
+}
